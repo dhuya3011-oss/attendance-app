@@ -1,0 +1,113 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Roll Call – Student Attendance</title>
+<style>
+:root{--bg:#f6f5f0;--card:#fff;--ink:#1d2433;--mute:#6b7280;--line:#dcdad0;--p:#1f7a4d;--a:#b3261e;--l:#b7791f;--accent:#23396b}
+@media(prefers-color-scheme:dark){:root{--bg:#14171f;--card:#1c212c;--ink:#e8e9ee;--mute:#9aa1b0;--line:#2e3545;--p:#4cc38a;--a:#f2776f;--l:#e5b455;--accent:#8fa8ef}}
+*{box-sizing:border-box}body{margin:0;background:var(--bg);color:var(--ink);font:16px/1.5 system-ui,sans-serif}
+h1,h2{font-family:Georgia,serif;margin:0}
+header{display:flex;justify-content:space-between;align-items:center;padding:14px 20px;border-bottom:2px solid var(--ink)}
+header h1{font-size:1.4rem}
+main{display:grid;grid-template-columns:240px 1fr;gap:20px;max-width:1000px;margin:20px auto;padding:0 16px}
+@media(max-width:700px){main{grid-template-columns:1fr}}
+aside,section{background:var(--card);border:1px solid var(--line);border-radius:6px;padding:16px}
+button,input,textarea,select{font:inherit;color:inherit}
+button{cursor:pointer;border:1px solid var(--line);background:var(--card);border-radius:6px;padding:6px 12px}
+button.pri{background:var(--accent);color:#fff;border-color:var(--accent)}
+:root:not(.x) button.pri{color:#fff}
+button:focus-visible,input:focus-visible,textarea:focus-visible{outline:3px solid var(--accent);outline-offset:1px}
+input,textarea,select{background:var(--bg);border:1px solid var(--line);border-radius:6px;padding:6px 10px;width:100%}
+.cls{display:flex;justify-content:space-between;width:100%;margin-bottom:6px;text-align:left}
+.cls.on{border-color:var(--accent);background:var(--accent);color:#fff}
+.row{display:flex;gap:8px;align-items:center;flex-wrap:wrap;margin:12px 0}
+.tabs button{border-radius:6px 6px 0 0}.tabs button.on{border-bottom:3px solid var(--accent);font-weight:600}
+.stu{display:flex;justify-content:space-between;align-items:center;padding:8px 0;border-bottom:1px solid var(--line);gap:8px}
+.stu small{color:var(--mute)}
+.mk{display:flex;gap:4px}
+.mk button{width:40px;padding:6px 0;font-weight:700}
+.mk button.P.on{background:var(--p);color:#fff;border-color:var(--p)}
+.mk button.A.on{background:var(--a);color:#fff;border-color:var(--a)}
+.mk button.L.on{background:var(--l);color:#fff;border-color:var(--l)}
+table{width:100%;border-collapse:collapse}th,td{text-align:left;padding:8px 6px;border-bottom:1px solid var(--line)}
+.bar{height:8px;background:var(--line);border-radius:4px;overflow:hidden;min-width:80px}.bar i{display:block;height:100%;background:var(--p)}
+.low{color:var(--a);font-weight:600}.mute{color:var(--mute)}
+</style>
+</head>
+<body>
+<header><h1>Roll Call</h1>
+<div class="row" style="margin:0"><button id="exp">Backup</button><button id="imp">Restore</button><input type="file" id="file" accept=".json" hidden></div></header>
+<main>
+<aside>
+<h2 style="font-size:1.1rem;margin-bottom:10px">Classes</h2>
+<div id="classes"></div>
+<div class="row"><input id="newc" placeholder="e.g. Grade 8 – B" aria-label="New class name"><button class="pri" id="addc">Add class</button></div>
+</aside>
+<section id="view"></section>
+</main>
+<script>
+const KEY='rollcall.v1';
+let db;try{db=JSON.parse(localStorage.getItem(KEY))}catch(e){}
+db=db||{classes:[],sel:null,tab:'mark',date:new Date().toISOString().slice(0,10)};
+const save=()=>{try{localStorage.setItem(KEY,JSON.stringify(db))}catch(e){}};
+const uid=()=>Math.random().toString(36).slice(2,9);
+const esc=s=>String(s).replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
+const cur=()=>db.classes.find(c=>c.id===db.sel);
+const $=id=>document.getElementById(id);
+
+function render(){
+  $('classes').innerHTML=db.classes.map(c=>`<button class="cls ${c.id===db.sel?'on':''}" data-c="${c.id}"><span>${esc(c.name)}</span><span>${c.students.length}</span></button>`).join('')||'<p class="mute">No classes yet. Add your first one below.</p>';
+  const c=cur(),v=$('view');
+  if(!c){v.innerHTML='<h2>Welcome</h2><p class="mute">Create a class on the left, then add students to start marking attendance.</p>';return}
+  v.innerHTML=`<div class="row" style="justify-content:space-between;margin-top:0"><h2>${esc(c.name)}</h2><button data-act="delc">Delete class</button></div>
+  <div class="tabs row" style="margin-bottom:0;border-bottom:1px solid var(--line)">${['mark','report','students'].map(t=>`<button class="${db.tab===t?'on':''}" data-tab="${t}">${{mark:'Mark attendance',report:'Report',students:'Students'}[t]}</button>`).join('')}</div>
+  <div id="body"></div>`;
+  ({mark,report,students})[db.tab](c);
+}
+function mark(c){
+  const rec=(c.att[db.date]=c.att[db.date]||{});
+  const n=s=>Object.values(rec).filter(x=>x===s).length;
+  $('body').innerHTML=`<div class="row"><label for="dt">Date</label><input id="dt" type="date" value="${db.date}" style="width:auto"><button data-act="allp">Mark all present</button></div>
+  ${c.students.length?c.students.map(s=>`<div class="stu"><div>${esc(s.name)} <small>${esc(s.roll)}</small></div><div class="mk" data-s="${s.id}">${['P','A','L'].map(k=>`<button class="${k} ${rec[s.id]===k?'on':''}" data-k="${k}" title="${{P:'Present',A:'Absent',L:'Late'}[k]}">${k}</button>`).join('')}</div></div>`).join(''):'<p class="mute">Add students in the Students tab first.</p>'}
+  <p class="mute">Present ${n('P')} · Absent ${n('A')} · Late ${n('L')} · Unmarked ${c.students.length-Object.keys(rec).filter(k=>c.students.some(s=>s.id===k)).length}</p>`;
+  $('dt').onchange=e=>{db.date=e.target.value||db.date;save();render()};
+}
+function stats(c){
+  const days=Object.keys(c.att).filter(d=>Object.keys(c.att[d]).length);
+  return c.students.map(s=>{let p=0,a=0,l=0;days.forEach(d=>{const x=c.att[d][s.id];x==='P'?p++:x==='A'?a++:x==='L'&&l++});
+    const t=p+a+l;return{s,p,a,l,t,pct:t?Math.round((p+l)/t*100):null}});
+}
+function report(c){
+  const r=stats(c);
+  $('body').innerHTML=`<div class="row"><button data-act="csv">Download CSV</button><span class="mute">Late counts as attended. Below 75% is flagged.</span></div>
+  ${r.length?`<div style="overflow-x:auto"><table><tr><th>Student</th><th>P</th><th>A</th><th>L</th><th>Attendance</th></tr>${r.map(x=>`<tr><td>${esc(x.s.name)} <small class="mute">${esc(x.s.roll)}</small></td><td>${x.p}</td><td>${x.a}</td><td>${x.l}</td><td>${x.pct==null?'<span class="mute">No data</span>':`<div class="row" style="margin:0"><div class="bar"><i style="width:${x.pct}%"></i></div><span class="${x.pct<75?'low':''}">${x.pct}%</span></div>`}</td></tr>`).join('')}</table></div>`:'<p class="mute">No students yet.</p>'}`;
+}
+function students(c){
+  $('body').innerHTML=`<div class="row"><label for="bulk" style="width:100%">Add students, one per line. Optional roll number first: <span class="mute">12, Asha Patil</span></label>
+  <textarea id="bulk" rows="5" placeholder="1, Asha Patil&#10;2, Rohan Mehta"></textarea><button class="pri" data-act="adds">Add students</button></div>
+  ${c.students.map(s=>`<div class="stu"><div>${esc(s.name)} <small>${esc(s.roll)}</small></div><button data-rm="${s.id}">Remove</button></div>`).join('')}`;
+}
+document.addEventListener('click',e=>{
+  const t=e.target.closest('button');if(!t)return;const c=cur();
+  if(t.dataset.c){db.sel=t.dataset.c}
+  else if(t.dataset.tab){db.tab=t.dataset.tab}
+  else if(t.dataset.k){const sid=t.parentElement.dataset.s,rec=c.att[db.date]=c.att[db.date]||{};rec[sid]===t.dataset.k?delete rec[sid]:rec[sid]=t.dataset.k}
+  else if(t.dataset.rm){if(!confirm('Remove this student and their records?'))return;c.students=c.students.filter(s=>s.id!==t.dataset.rm);Object.values(c.att).forEach(d=>delete d[t.dataset.rm])}
+  else if(t.dataset.act==='allp'){const rec=c.att[db.date]=c.att[db.date]||{};c.students.forEach(s=>rec[s.id]='P')}
+  else if(t.dataset.act==='adds'){$('bulk').value.split('\n').map(x=>x.trim()).filter(Boolean).forEach((l,i)=>{const m=l.match(/^([\w-]+)\s*[,.\t]\s*(.+)$/);c.students.push({id:uid(),roll:m?m[1]:String(c.students.length+1),name:m?m[2]:l})})}
+  else if(t.dataset.act==='delc'){if(!confirm('Delete this class and all its attendance?'))return;db.classes=db.classes.filter(x=>x!==c);db.sel=null}
+  else if(t.dataset.act==='csv'){const days=Object.keys(c.att).sort();const rows=[['Roll','Name',...days,'Attendance %']];stats(c).forEach(x=>rows.push([x.s.roll,x.s.name,...days.map(d=>c.att[d][x.s.id]||''),x.pct??'']));dl(c.name+'.csv',rows.map(r=>r.map(v=>`"${String(v).replace(/"/g,'""')}"`).join(',')).join('\n'),'text/csv');return}
+  else if(t.id==='addc'){const v=$('newc').value.trim();if(!v){$('newc').focus();return}const n={id:uid(),name:v,students:[],att:{}};db.classes.push(n);db.sel=n.id;db.tab='students';$('newc').value=''}
+  else if(t.id==='exp'){dl('rollcall-backup.json',JSON.stringify(db),'application/json');return}
+  else if(t.id==='imp'){$('file').click();return}
+  else return;
+  save();render();
+});
+$('file').onchange=e=>{const f=e.target.files[0];if(!f)return;f.text().then(x=>{try{const d=JSON.parse(x);if(!Array.isArray(d.classes))throw 0;db=d;save();render()}catch(_){alert('That file is not a Roll Call backup.')}})};
+function dl(n,txt,type){const a=document.createElement('a');a.href=URL.createObjectURL(new Blob([txt],{type}));a.download=n;a.click()}
+render();
+</script>
+</body>
+</html>
