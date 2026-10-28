@@ -55,7 +55,7 @@ const chip=p=>p==null?'':`<span class="chip ${p>=75?'g':p>=60?'o':'r'}">${p}%</s
 const remark=p=>p==null?'':p>=90?'EXCELLENT':p>=70?'VERY GOOD':p>=50?'GOOD':p>=25?'BAD':'WORST';
 
 /* ===== Supabase cloud sync + login. Paste your project values below ===== */
-const SB_URL='https://cvscgpqwbeuqgodhcvdq.supabase.co/rest/v1/',SB_KEY='sb_publishable_Ul1xhv1ugqptgWBcK0tk2g_zBK9bbIF',
+const SB_URL='https://cvscgpqwbeuqgodhcvdq.supabase.co/rest/v1/',SB_KEY='sb_publishable_Ul1xhv1ugqptgWBcK0tk2g_zBK9bbIF';
 const AUTH={on:!!(SB_URL&&SB_KEY&&window.supabase),user:null,status:''};
 const sb=AUTH.on?supabase.createClient(SB_URL,SB_KEY):null,timers={};
 function setSt(x){AUTH.status=x;const e=$('st');if(e)e.textContent=x}
