@@ -1,113 +1,158 @@
 <!DOCTYPE html>
-<html lang="en">
-<head>
-<meta charset="utf-8">
-<meta name="viewport" content="width=device-width, initial-scale=1">
-<title>Roll Call – Student Attendance</title>
+<html lang="en"><head><meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Roll Call – Attendance, Marks & Fees</title>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
 <style>
-:root{--bg:#f6f5f0;--card:#fff;--ink:#1d2433;--mute:#6b7280;--line:#dcdad0;--p:#1f7a4d;--a:#b3261e;--l:#b7791f;--accent:#23396b}
-@media(prefers-color-scheme:dark){:root{--bg:#14171f;--card:#1c212c;--ink:#e8e9ee;--mute:#9aa1b0;--line:#2e3545;--p:#4cc38a;--a:#f2776f;--l:#e5b455;--accent:#8fa8ef}}
-*{box-sizing:border-box}body{margin:0;background:var(--bg);color:var(--ink);font:16px/1.5 system-ui,sans-serif}
-h1,h2{font-family:Georgia,serif;margin:0}
-header{display:flex;justify-content:space-between;align-items:center;padding:14px 20px;border-bottom:2px solid var(--ink)}
-header h1{font-size:1.4rem}
-main{display:grid;grid-template-columns:240px 1fr;gap:20px;max-width:1000px;margin:20px auto;padding:0 16px}
-@media(max-width:700px){main{grid-template-columns:1fr}}
-aside,section{background:var(--card);border:1px solid var(--line);border-radius:6px;padding:16px}
-button,input,textarea,select{font:inherit;color:inherit}
-button{cursor:pointer;border:1px solid var(--line);background:var(--card);border-radius:6px;padding:6px 12px}
-button.pri{background:var(--accent);color:#fff;border-color:var(--accent)}
-:root:not(.x) button.pri{color:#fff}
-button:focus-visible,input:focus-visible,textarea:focus-visible{outline:3px solid var(--accent);outline-offset:1px}
-input,textarea,select{background:var(--bg);border:1px solid var(--line);border-radius:6px;padding:6px 10px;width:100%}
-.cls{display:flex;justify-content:space-between;width:100%;margin-bottom:6px;text-align:left}
-.cls.on{border-color:var(--accent);background:var(--accent);color:#fff}
-.row{display:flex;gap:8px;align-items:center;flex-wrap:wrap;margin:12px 0}
-.tabs button{border-radius:6px 6px 0 0}.tabs button.on{border-bottom:3px solid var(--accent);font-weight:600}
-.stu{display:flex;justify-content:space-between;align-items:center;padding:8px 0;border-bottom:1px solid var(--line);gap:8px}
-.stu small{color:var(--mute)}
-.mk{display:flex;gap:4px}
-.mk button{width:40px;padding:6px 0;font-weight:700}
-.mk button.P.on{background:var(--p);color:#fff;border-color:var(--p)}
-.mk button.A.on{background:var(--a);color:#fff;border-color:var(--a)}
-.mk button.L.on{background:var(--l);color:#fff;border-color:var(--l)}
-table{width:100%;border-collapse:collapse}th,td{text-align:left;padding:8px 6px;border-bottom:1px solid var(--line)}
-.bar{height:8px;background:var(--line);border-radius:4px;overflow:hidden;min-width:80px}.bar i{display:block;height:100%;background:var(--p)}
-.low{color:var(--a);font-weight:600}.mute{color:var(--mute)}
-</style>
-</head>
-<body>
-<header><h1>Roll Call</h1>
-<div class="row" style="margin:0"><button id="exp">Backup</button><button id="imp">Restore</button><input type="file" id="file" accept=".json" hidden></div></header>
-<main>
-<aside>
-<h2 style="font-size:1.1rem;margin-bottom:10px">Classes</h2>
-<div id="classes"></div>
-<div class="row"><input id="newc" placeholder="e.g. Grade 8 – B" aria-label="New class name"><button class="pri" id="addc">Add class</button></div>
-</aside>
-<section id="view"></section>
-</main>
+:root{--bg:#eef3fb;--card:#fff;--ink:#16203a;--mute:#6a7590;--line:#dfe6f3;--pri:#1f4fd6;--pb:#d4e6fb;--pt:#0b5cad;--ab:#fadcdc;--at:#b3261e;--hb:#e9ecf2;--ok:#d9f4e2;--okt:#17743a;--mid:#fdeccb;--midt:#9a5b00}
+.dark{--bg:#0e1424;--card:#171f35;--ink:#e8ecf7;--mute:#93a0bf;--line:#26314f;--pri:#4f7cff;--pb:#1d3a66;--pt:#9cc8ff;--ab:#4a2024;--at:#ff9c94;--hb:#222b44;--ok:#173c28;--okt:#7be0a1;--mid:#4a3612;--midt:#f2c36b}
+*{box-sizing:border-box}body{margin:0;background:var(--bg);color:var(--ink);font:15px/1.4 system-ui,sans-serif;padding-bottom:70px}
+button,input,select,textarea{font:inherit;color:inherit}button{cursor:pointer;border:0;background:none}
+:focus-visible{outline:3px solid var(--pri);outline-offset:1px}
+.top{background:var(--pri);color:#fff;display:flex;align-items:center;gap:8px;padding:12px 14px;position:sticky;top:0;z-index:20}
+.top h1{font-size:1.15rem;margin:0;flex:1;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.top button{color:#fff;font-size:1.2rem;padding:4px 8px;border-radius:8px}.top button.on{background:#ffffff33}
+.wrap{max-width:900px;margin:0 auto;padding:12px}
+.card{display:flex;gap:12px;align-items:center;background:var(--card);border:1px solid var(--line);border-radius:16px;padding:14px;margin-bottom:10px;width:100%;text-align:left}
+.ic{width:44px;height:44px;border-radius:12px;display:grid;place-items:center;font-size:1.3rem;background:var(--pb)}
+.card .m{flex:1}.card b{display:block}.card small{color:var(--mute)}
+.fab{position:fixed;right:18px;bottom:78px;width:56px;height:56px;border-radius:18px;background:var(--pri);color:#fff;font-size:2rem;box-shadow:0 4px 14px #0004}
+nav{position:fixed;bottom:0;left:0;right:0;background:var(--card);border-top:1px solid var(--line);display:flex;z-index:20}
+nav button{flex:1;padding:8px 0;color:var(--mute);font-size:.8rem}nav button.on{color:var(--pri);font-weight:700}
+.bar{display:flex;gap:6px;align-items:center;padding:8px 12px;background:var(--card);border-bottom:1px solid var(--line);font-size:.85rem;color:var(--mute)}
+.bar span{flex:1}.bar button{font-size:1.2rem;padding:4px 10px;border-radius:10px;color:var(--ink)}.bar button.on{background:var(--pb)}
+.gw{overflow:auto;max-height:calc(100vh - 170px);background:var(--card)}
+table{border-collapse:separate;border-spacing:0;font-size:.85rem}
+th,td{padding:6px 8px;border-bottom:1px solid var(--line);border-right:1px solid var(--line);text-align:center;white-space:nowrap;background:var(--card)}
+thead th{position:sticky;top:0;z-index:3;font-size:.72rem}
+.s1,.s2{position:sticky;z-index:2;text-align:left}.s1{left:0;min-width:110px}.s2{left:110px;min-width:44px;text-align:center}thead .s1,thead .s2{z-index:5}
+.cell{display:inline-block;width:32px;height:30px;line-height:30px;border-radius:8px;font-weight:700;user-select:none}
+.P{background:var(--pb);color:var(--pt)}.A{background:var(--ab);color:var(--at)}.H{background:var(--hb);color:var(--mute)}.E{background:var(--hb)}
+.hol{color:var(--at)}.chip{padding:2px 8px;border-radius:6px;font-weight:700}.g{background:var(--ok);color:var(--okt)}.o{background:var(--mid);color:var(--midt)}.r{background:var(--ab);color:var(--at)}
+td input{width:70px;text-align:center;border:1px solid var(--line);border-radius:6px;background:var(--bg);padding:4px}
+dialog{border:0;border-radius:18px;padding:18px;background:var(--card);color:var(--ink);width:min(92vw,400px)}dialog::backdrop{background:#0008}
+dialog label{display:block;margin:8px 0 2px;color:var(--mute);font-size:.85rem}dialog input,dialog select,dialog textarea{width:100%;padding:9px;border:1px solid var(--line);border-radius:10px;background:var(--bg)}
+.btn{background:var(--pri);color:#fff;padding:10px 16px;border-radius:12px;font-weight:600}.btn.g2{background:var(--hb);color:var(--ink)}
+.mi{display:block;width:100%;text-align:left;padding:12px 6px;border-bottom:1px solid var(--line)}.mi.d{color:var(--at)}
+.empty{text-align:center;color:var(--mute);padding:40px 10px}
+.res{background:var(--pb);color:var(--pt);padding:14px;border-radius:14px;text-align:center;font-weight:700;margin:14px 0}
+</style></head><body>
+<div class="top" id="top"></div><div id="app"></div>
+<button class="fab" id="fab" aria-label="New sheet">+</button>
+<nav id="nav"></nav>
+<dialog id="dlg"></dialog><input type="file" id="xf" accept=".xlsx,.xls,.csv" hidden>
 <script>
-const KEY='rollcall.v1';
-let db;try{db=JSON.parse(localStorage.getItem(KEY))}catch(e){}
-db=db||{classes:[],sel:null,tab:'mark',date:new Date().toISOString().slice(0,10)};
-const save=()=>{try{localStorage.setItem(KEY,JSON.stringify(db))}catch(e){}};
-const uid=()=>Math.random().toString(36).slice(2,9);
-const esc=s=>String(s).replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
-const cur=()=>db.classes.find(c=>c.id===db.sel);
-const $=id=>document.getElementById(id);
-
+const K='rollcall.v2';let db;try{db=JSON.parse(localStorage.getItem(K))}catch(e){}
+db=db||{sheets:[],dark:false};let V={tab:'all',sid:null,edit:true,q:'',search:false};
+const $=i=>document.getElementById(i),uid=()=>Math.random().toString(36).slice(2,9),
+esc=s=>String(s??'').replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
+const save=()=>{try{localStorage.setItem(K,JSON.stringify(db))}catch(e){}},cur=()=>db.sheets.find(s=>s.id===V.sid);
+const ICON={attendance:'📅',marks:'📝',fees:'💳'},LBL={attendance:'Attendance',marks:'Marks',fees:'Fees'};
+const touch=s=>{s.mod=Date.now();save()};
+const pc=(a,b)=>b>0?Math.round(a/b*1000)/10:null;
+const chip=p=>p==null?'':`<span class="chip ${p>=75?'g':p>=60?'o':'r'}">${p}%</span>`;
+const remark=p=>p==null?'':p>=90?'EXCELLENT':p>=70?'VERY GOOD':p>=50?'GOOD':p>=25?'BAD':'WORST';
 function render(){
-  $('classes').innerHTML=db.classes.map(c=>`<button class="cls ${c.id===db.sel?'on':''}" data-c="${c.id}"><span>${esc(c.name)}</span><span>${c.students.length}</span></button>`).join('')||'<p class="mute">No classes yet. Add your first one below.</p>';
-  const c=cur(),v=$('view');
-  if(!c){v.innerHTML='<h2>Welcome</h2><p class="mute">Create a class on the left, then add students to start marking attendance.</p>';return}
-  v.innerHTML=`<div class="row" style="justify-content:space-between;margin-top:0"><h2>${esc(c.name)}</h2><button data-act="delc">Delete class</button></div>
-  <div class="tabs row" style="margin-bottom:0;border-bottom:1px solid var(--line)">${['mark','report','students'].map(t=>`<button class="${db.tab===t?'on':''}" data-tab="${t}">${{mark:'Mark attendance',report:'Report',students:'Students'}[t]}</button>`).join('')}</div>
-  <div id="body"></div>`;
-  ({mark,report,students})[db.tab](c);
+ document.body.className=db.dark?'dark':'';const s=cur();
+ $('fab').style.display=!s&&V.tab!=='calc'?'block':'none';$('nav').style.display=s?'none':'flex';
+ document.body.style.paddingBottom=s?0:'70px';
+ $('top').innerHTML=s?`<button data-a="back" aria-label="Back">←</button><h1>${esc(s.name)}</h1><button data-a="menu" aria-label="Menu">⋮</button>`:
+  `<h1>${V.tab==='calc'?'Percentage Calculator':'All Sheets'}</h1><button data-a="srch" aria-label="Search">🔍</button><button data-a="dark" aria-label="Toggle theme">${db.dark?'☀️':'🌙'}</button>`;
+ $('nav').innerHTML=[['all','▦','All'],['attendance','📅','Attendance'],['marks','📝','Marks'],['fees','💳','Fees'],['calc','🧮','Calc']].map(([k,i,l])=>`<button data-t="${k}" class="${V.tab===k?'on':''}">${i}<br>${l}</button>`).join('');
+ $('app').innerHTML=s?sheet(s):V.tab==='calc'?calc():list();
 }
-function mark(c){
-  const rec=(c.att[db.date]=c.att[db.date]||{});
-  const n=s=>Object.values(rec).filter(x=>x===s).length;
-  $('body').innerHTML=`<div class="row"><label for="dt">Date</label><input id="dt" type="date" value="${db.date}" style="width:auto"><button data-act="allp">Mark all present</button></div>
-  ${c.students.length?c.students.map(s=>`<div class="stu"><div>${esc(s.name)} <small>${esc(s.roll)}</small></div><div class="mk" data-s="${s.id}">${['P','A','L'].map(k=>`<button class="${k} ${rec[s.id]===k?'on':''}" data-k="${k}" title="${{P:'Present',A:'Absent',L:'Late'}[k]}">${k}</button>`).join('')}</div></div>`).join(''):'<p class="mute">Add students in the Students tab first.</p>'}
-  <p class="mute">Present ${n('P')} · Absent ${n('A')} · Late ${n('L')} · Unmarked ${c.students.length-Object.keys(rec).filter(k=>c.students.some(s=>s.id===k)).length}</p>`;
-  $('dt').onchange=e=>{db.date=e.target.value||db.date;save();render()};
+function list(){
+ const f=db.sheets.filter(s=>(V.tab==='all'||s.type===V.tab)&&s.name.toLowerCase().includes(V.q.toLowerCase()));
+ return `<div class="wrap">${V.search?`<input id="q" value="${esc(V.q)}" placeholder="Search sheets" style="width:100%;padding:10px;border-radius:12px;border:1px solid var(--line);margin-bottom:10px;background:var(--card);color:var(--ink)">`:''}${f.map(s=>`<button class="card" data-o="${s.id}"><div class="ic">${ICON[s.type]}</div><div class="m"><b>${esc(s.name)}</b><small>👥 ${s.students.length} Students · ${LBL[s.type]}</small></div><small>Modified<br>${new Date(s.mod).toLocaleString([], {month:'short',day:'numeric',hour:'2-digit',minute:'2-digit'})}</small></button>`).join('')||'<div class="empty">No sheets here yet.<br>Tap + to create your first sheet.</div>'}</div>`;
 }
-function stats(c){
-  const days=Object.keys(c.att).filter(d=>Object.keys(c.att[d]).length);
-  return c.students.map(s=>{let p=0,a=0,l=0;days.forEach(d=>{const x=c.att[d][s.id];x==='P'?p++:x==='A'?a++:x==='L'&&l++});
-    const t=p+a+l;return{s,p,a,l,t,pct:t?Math.round((p+l)/t*100):null}});
+function sheet(s){
+ const e=V.edit,hint={attendance:'Tap a cell to change · long press a date for Holiday',marks:'Enter marks in the cells',fees:'Enter amounts paid in the cells'}[s.type];
+ let h='',b='';const nm=`<th class="s1">Student Name</th><th class="s2">Roll</th>`;
+ const rows=(fn)=>s.students.map(st=>`<tr><td class="s1">${e?`<button data-rm="${st.id}" aria-label="Remove" style="color:var(--at)">×</button> `:''}${esc(st.name)}</td><td class="s2">${esc(st.roll)}</td>${fn(st)}</tr>`).join('');
+ if(s.type==='attendance'){
+  h=nm+s.dates.map(d=>{const t=new Date(d.d+'T00:00');return `<th data-hd="${d.d}" style="min-width:48px;user-select:none"><div>${t.toLocaleDateString('en',{weekday:'short'}).toUpperCase()}</div><b style="font-size:1rem" class="${d.h?'hol':''}">${String(t.getDate()).padStart(2,'0')}</b><div>${t.toLocaleDateString('en',{month:'short'}).toUpperCase()}</div></th>`}).join('')+'<th>P</th><th>A</th><th>%</th>';
+  b=rows(st=>{let p=0,a=0;const c=s.dates.map(d=>{if(d.h)return `<td><span class="cell H">H</span></td>`;const v=(s.att[st.id]||{})[d.d]||'';v==='P'&&p++;v==='A'&&a++;return `<td data-c="${st.id}|${d.d}"><span class="cell ${v||'E'}">${v||'·'}</span></td>`}).join('');return c+`<td>${p}</td><td style="color:var(--at)">${a}</td><td>${chip(pc(p,p+a))}</td>`});
+ }else if(s.type==='marks'){
+  h=nm+s.tests.map(t=>`<th colspan="4" data-tn="${t.id}">${esc(t.name)} ✎</th>`).join('');
+  h=`<tr>${h}</tr><tr><th class="s1"></th><th class="s2"></th>${s.tests.map(()=>'<th>Obtained</th><th>Total</th><th>%</th><th>Remarks</th>').join('')}</tr>`;
+  b=rows(st=>s.tests.map(t=>{const v=(s.vals[st.id]||{})[t.id],p=v===''||v==null?null:pc(+v,t.total);return `<td>${e?`<input type="number" data-m="${st.id}|${t.id}" value="${v??''}">`:(v??'')}</td><td>${t.total}</td><td><b>${p??''}${p!=null?'%':''}</b></td><td>${remark(p)}</td>`}).join(''));
+ }else{
+  h=nm+'<th>Paid</th><th>Pending</th><th>Total</th><th>Remarks</th>';
+  b=rows(st=>{const v=+(s.vals[st.id]||{}).paid||0,pe=Math.max(s.total-v,0);return `<td>${e?`<input type="number" data-f="${st.id}" value="${(s.vals[st.id]||{}).paid??''}">`:v}</td><td>${pe}</td><td>${s.total}</td><td>${pe?'PENDING':'PAID'}</td>`});
+ }
+ if(s.type!=='marks')h=`<tr>${h}</tr>`;
+ return `<div class="bar"><span>ⓘ ${e?'Editing mode: '+hint:'View mode'}</span><button data-a="edit" class="${e?'on':''}" aria-label="Toggle edit mode">${e?'✏️':'👁'}</button><button data-a="menu" aria-label="More">＋</button></div>
+ <div class="gw"><table><thead>${h}</thead><tbody>${b}</tbody></table>${s.students.length?'':'<div class="empty">No students yet. Tap ＋ → Add students.</div>'}</div>`;
 }
-function report(c){
-  const r=stats(c);
-  $('body').innerHTML=`<div class="row"><button data-act="csv">Download CSV</button><span class="mute">Late counts as attended. Below 75% is flagged.</span></div>
-  ${r.length?`<div style="overflow-x:auto"><table><tr><th>Student</th><th>P</th><th>A</th><th>L</th><th>Attendance</th></tr>${r.map(x=>`<tr><td>${esc(x.s.name)} <small class="mute">${esc(x.s.roll)}</small></td><td>${x.p}</td><td>${x.a}</td><td>${x.l}</td><td>${x.pct==null?'<span class="mute">No data</span>':`<div class="row" style="margin:0"><div class="bar"><i style="width:${x.pct}%"></i></div><span class="${x.pct<75?'low':''}">${x.pct}%</span></div>`}</td></tr>`).join('')}</table></div>`:'<p class="mute">No students yet.</p>'}`;
+function calc(){
+ return `<div class="wrap"><label>Total marks<input id="ct" type="number" style="width:100%;padding:12px;border-radius:12px;border:1px solid var(--line);background:var(--card);color:var(--ink)"></label><br><br><label>Marks obtained<input id="co" type="number" style="width:100%;padding:12px;border-radius:12px;border:1px solid var(--line);background:var(--card);color:var(--ink)"></label><p style="text-align:center;color:var(--mute)">OR</p><label>Percentage (%)<input id="cp" type="number" style="width:100%;padding:12px;border-radius:12px;border:1px solid var(--line);background:var(--card);color:var(--ink)"></label><div class="res" id="cr">Enter any two values</div></div>`;
 }
-function students(c){
-  $('body').innerHTML=`<div class="row"><label for="bulk" style="width:100%">Add students, one per line. Optional roll number first: <span class="mute">12, Asha Patil</span></label>
-  <textarea id="bulk" rows="5" placeholder="1, Asha Patil&#10;2, Rohan Mehta"></textarea><button class="pri" data-act="adds">Add students</button></div>
-  ${c.students.map(s=>`<div class="stu"><div>${esc(s.name)} <small>${esc(s.roll)}</small></div><button data-rm="${s.id}">Remove</button></div>`).join('')}`;
+function doCalc(){const t=+$('ct').value,o=+$('co').value,p=+$('cp').value;let r='Enter any two values';
+ if(t&&$('co').value!=='')r=`Percentage: ${(o/t*100).toFixed(2)}%`;else if(t&&$('cp').value!=='')r=`Marks obtained: ${(t*p/100).toFixed(2)}`;else if($('co').value!==''&&p)r=`Total marks: ${(o*100/p).toFixed(2)}`;$('cr').textContent=r}
+function dlg(html){const d=$('dlg');d.innerHTML=html;d.showModal();return d}
+function newSheet(){
+ dlg(`<h3 style="margin-top:0">New sheet</h3><label>Name<input id="nn" placeholder="e.g. Math Class"></label><label>Type<select id="nt"><option value="attendance">Attendance</option><option value="marks">Marks</option><option value="fees">Fees</option></select></label>
+ <label>Students (one per line: roll, name)</label><textarea id="ns" rows="5" placeholder="1, Asha Patil&#10;2, Rohan Mehta"></textarea>
+ <p><button class="btn g2" data-a="imp">Import from Excel</button></p><div style="display:flex;gap:8px;justify-content:flex-end"><button class="btn g2" data-a="close">Cancel</button><button class="btn" data-a="create">Create</button></div>`);
 }
+const parseSt=(txt,start=0)=>txt.split('\n').map(x=>x.trim()).filter(Boolean).map((l,i)=>{const m=l.match(/^([\w-]+)\s*[,\t]\s*(.+)$/);return{id:uid(),roll:m?m[1]:String(start+i+1),name:m?m[2]:l}});
+function menu(){
+ const s=cur(),it=[['addst','Add students']];
+ if(s.type==='attendance')it.unshift(['adddate','Add date'],['allp','Mark all present'],['alla','Mark all absent'],['clr','Clear all']);
+ if(s.type==='marks')it.unshift(['addtest','Add marks group']);
+ if(s.type==='fees')it.unshift(['fee','Set total fee']);
+ it.push(['xl','Export to Excel'],['ren','Rename sheet'],['del','Delete sheet']);
+ dlg(it.map(([k,l])=>`<button class="mi ${k==='del'?'d':''}" data-m2="${k}">${l}</button>`).join(''));
+}
+function act(k){
+ const s=cur();$('dlg').close();
+ if(k==='adddate'){const d=prompt('Date (YYYY-MM-DD)',new Date().toISOString().slice(0,10));if(!d||!/^\d{4}-\d{2}-\d{2}$/.test(d)||s.dates.some(x=>x.d===d))return;s.dates.push({d,h:0});s.dates.sort((a,b)=>a.d<b.d?-1:1);s.students.forEach(t=>(s.att[t.id]=s.att[t.id]||{})[d]='P')}
+ else if(k==='allp'||k==='alla'||k==='clr'){if(!confirm('Apply to all students and dates?'))return;s.students.forEach(t=>{s.att[t.id]={};s.dates.forEach(d=>{if(!d.h&&k!=='clr')s.att[t.id][d.d]=k==='allp'?'P':'A'})})}
+ else if(k==='addtest'){const n=prompt('Group name','Test '+(s.tests.length+1));if(!n)return;const t=+prompt('Total marks','100');if(!t)return;s.tests.push({id:uid(),name:n,total:t})}
+ else if(k==='fee'){const t=+prompt('Total fee per student',s.total);if(!t)return;s.total=t}
+ else if(k==='addst'){const t=prompt('Add students. Separate several with ; (e.g. 5, Asha; 6, Ravi)');if(!t)return;s.students.push(...parseSt(t.replace(/;/g,'\n'),s.students.length))}
+ else if(k==='ren'){const n=prompt('Sheet name',s.name);if(!n)return;s.name=n}
+ else if(k==='del'){if(!confirm('Delete this sheet?'))return;db.sheets=db.sheets.filter(x=>x!==s);V.sid=null}
+ else if(k==='xl')return xl(s);
+ if(db.sheets.includes(s))touch(s);save();render();
+}
+function xl(s){
+ let a;if(s.type==='attendance'){a=[['Roll','Name',...s.dates.map(d=>d.d+(d.h?' (H)':'')),'P','A','%']];s.students.forEach(t=>{let p=0,x=0;const r=s.dates.map(d=>{if(d.h)return'H';const v=(s.att[t.id]||{})[d.d]||'';v==='P'&&p++;v==='A'&&x++;return v});a.push([t.roll,t.name,...r,p,x,pc(p,p+x)??''])})}
+ else if(s.type==='marks'){a=[['Roll','Name',...s.tests.flatMap(t=>[t.name+' Obtained','Total','%'])]];s.students.forEach(t=>a.push([t.roll,t.name,...s.tests.flatMap(q=>{const v=(s.vals[t.id]||{})[q.id];return[v??'',q.total,v===''||v==null?'':pc(+v,q.total)]})]))}
+ else{a=[['Roll','Name','Paid','Pending','Total']];s.students.forEach(t=>{const v=+(s.vals[t.id]||{}).paid||0;a.push([t.roll,t.name,v,Math.max(s.total-v,0),s.total])})}
+ if(!window.XLSX)return alert('Excel library failed to load. Check your internet connection.');
+ const wb=XLSX.utils.book_new();XLSX.utils.book_append_sheet(wb,XLSX.utils.aoa_to_sheet(a),'Sheet1');XLSX.writeFile(wb,s.name+'.xlsx');
+}
+let lp;
+document.addEventListener('pointerdown',e=>{const h=e.target.closest('[data-hd]');if(!h)return;lp=setTimeout(()=>{lp=0;const s=cur(),d=s.dates.find(x=>x.d===h.dataset.hd);d.h=d.h?0:1;touch(s);render()},550)});
+['pointerup','pointerleave','pointermove'].forEach(t=>document.addEventListener(t,()=>{clearTimeout(lp)}));
 document.addEventListener('click',e=>{
-  const t=e.target.closest('button');if(!t)return;const c=cur();
-  if(t.dataset.c){db.sel=t.dataset.c}
-  else if(t.dataset.tab){db.tab=t.dataset.tab}
-  else if(t.dataset.k){const sid=t.parentElement.dataset.s,rec=c.att[db.date]=c.att[db.date]||{};rec[sid]===t.dataset.k?delete rec[sid]:rec[sid]=t.dataset.k}
-  else if(t.dataset.rm){if(!confirm('Remove this student and their records?'))return;c.students=c.students.filter(s=>s.id!==t.dataset.rm);Object.values(c.att).forEach(d=>delete d[t.dataset.rm])}
-  else if(t.dataset.act==='allp'){const rec=c.att[db.date]=c.att[db.date]||{};c.students.forEach(s=>rec[s.id]='P')}
-  else if(t.dataset.act==='adds'){$('bulk').value.split('\n').map(x=>x.trim()).filter(Boolean).forEach((l,i)=>{const m=l.match(/^([\w-]+)\s*[,.\t]\s*(.+)$/);c.students.push({id:uid(),roll:m?m[1]:String(c.students.length+1),name:m?m[2]:l})})}
-  else if(t.dataset.act==='delc'){if(!confirm('Delete this class and all its attendance?'))return;db.classes=db.classes.filter(x=>x!==c);db.sel=null}
-  else if(t.dataset.act==='csv'){const days=Object.keys(c.att).sort();const rows=[['Roll','Name',...days,'Attendance %']];stats(c).forEach(x=>rows.push([x.s.roll,x.s.name,...days.map(d=>c.att[d][x.s.id]||''),x.pct??'']));dl(c.name+'.csv',rows.map(r=>r.map(v=>`"${String(v).replace(/"/g,'""')}"`).join(',')).join('\n'),'text/csv');return}
-  else if(t.id==='addc'){const v=$('newc').value.trim();if(!v){$('newc').focus();return}const n={id:uid(),name:v,students:[],att:{}};db.classes.push(n);db.sel=n.id;db.tab='students';$('newc').value=''}
-  else if(t.id==='exp'){dl('rollcall-backup.json',JSON.stringify(db),'application/json');return}
-  else if(t.id==='imp'){$('file').click();return}
-  else return;
-  save();render();
+ const b=e.target.closest('button,[data-c],[data-tn]');if(!b)return;const s=cur(),D=b.dataset;
+ if(D.t){V.tab=D.t;V.sid=null;V.search=false;V.q=''}
+ else if(D.o){V.sid=D.o;V.edit=true}
+ else if(D.a==='back')V.sid=null;
+ else if(D.a==='dark')db.dark=!db.dark;
+ else if(D.a==='srch')V.search=!V.search;
+ else if(D.a==='edit')V.edit=!V.edit;
+ else if(D.a==='menu'){menu();return}
+ else if(D.a==='close'){$('dlg').close();return}
+ else if(D.a==='imp'){$('xf').click();return}
+ else if(D.a==='create'){const n=$('nn').value.trim();if(!n){$('nn').focus();return}const t=$('nt').value,st=parseSt($('ns').value);
+  const o={id:uid(),name:n,type:t,mod:Date.now(),students:st};
+  if(t==='attendance')Object.assign(o,{dates:[],att:{}});if(t==='marks')Object.assign(o,{tests:[{id:uid(),name:'Test 1',total:100}],vals:{}});if(t==='fees')Object.assign(o,{total:1000,vals:{}});
+  db.sheets.unshift(o);V.sid=o.id;$('dlg').close()}
+ else if(b.id==='fab'){newSheet();return}
+ else if(D.m2){act(D.m2);return}
+ else if(D.rm){if(!confirm('Remove this student?'))return;s.students=s.students.filter(x=>x.id!==D.rm);touch(s)}
+ else if(D.c){if(!V.edit)return;const[id,d]=D.c.split('|');const r=s.att[id]=s.att[id]||{};r[d]=r[d]==='P'?'A':r[d]==='A'?'':'P';touch(s)}
+ else if(D.tn){const t=s.tests.find(x=>x.id===D.tn),n=prompt('Rename group',t.name);if(n)t.name=n;touch(s)}
+ else return;
+ save();render();
 });
-$('file').onchange=e=>{const f=e.target.files[0];if(!f)return;f.text().then(x=>{try{const d=JSON.parse(x);if(!Array.isArray(d.classes))throw 0;db=d;save();render()}catch(_){alert('That file is not a Roll Call backup.')}})};
-function dl(n,txt,type){const a=document.createElement('a');a.href=URL.createObjectURL(new Blob([txt],{type}));a.download=n;a.click()}
+document.addEventListener('change',e=>{const s=cur(),D=e.target.dataset;if(!s)return;
+ if(D.m){const[i,t]=D.m.split('|');(s.vals[i]=s.vals[i]||{})[t]=e.target.value}else if(D.f){(s.vals[D.f]=s.vals[D.f]||{}).paid=e.target.value}else return;touch(s);render()});
+document.addEventListener('input',e=>{if(e.target.id==='q'){V.q=e.target.value;const p=e.target.selectionStart;render();const q=$('q');q.focus();q.setSelectionRange(p,p)}if(['ct','co','cp'].includes(e.target.id))doCalc()});
+$('xf').onchange=e=>{const f=e.target.files[0];if(!f||!window.XLSX)return;f.arrayBuffer().then(buf=>{const w=XLSX.read(buf),r=XLSX.utils.sheet_to_json(w.Sheets[w.SheetNames[0]],{header:1}).filter(x=>x.length);
+ const hd=/name|roll/i.test(String(r[0]));const rows=hd?r.slice(1):r;const txt=rows.map((x,i)=>x.length>1?`${x[0]}, ${x[1]}`:`${i+1}, ${x[0]}`).join('\n');if($('ns'))$('ns').value=txt;e.target.value=''})};
 render();
-</script>
-</body>
-</html>
+</script></body></html>
