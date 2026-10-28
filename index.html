@@ -2,6 +2,7 @@
 <html lang="en"><head><meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
 <title>Roll Call – Attendance, Marks & Fees</title>
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.45.4/dist/umd/supabase.min.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
 <style>
 :root{--bg:#eef3fb;--card:#fff;--ink:#16203a;--mute:#6a7590;--line:#dfe6f3;--pri:#1f4fd6;--pb:#d4e6fb;--pt:#0b5cad;--ab:#fadcdc;--at:#b3261e;--hb:#e9ecf2;--ok:#d9f4e2;--okt:#17743a;--mid:#fdeccb;--midt:#9a5b00}
@@ -48,16 +49,45 @@ const $=i=>document.getElementById(i),uid=()=>Math.random().toString(36).slice(2
 esc=s=>String(s??'').replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
 const save=()=>{try{localStorage.setItem(K,JSON.stringify(db))}catch(e){}},cur=()=>db.sheets.find(s=>s.id===V.sid);
 const ICON={attendance:'📅',marks:'📝',fees:'💳'},LBL={attendance:'Attendance',marks:'Marks',fees:'Fees'};
-const touch=s=>{s.mod=Date.now();save()};
+const touch=s=>{s.mod=Date.now();save();push(s)};
 const pc=(a,b)=>b>0?Math.round(a/b*1000)/10:null;
 const chip=p=>p==null?'':`<span class="chip ${p>=75?'g':p>=60?'o':'r'}">${p}%</span>`;
 const remark=p=>p==null?'':p>=90?'EXCELLENT':p>=70?'VERY GOOD':p>=50?'GOOD':p>=25?'BAD':'WORST';
+
+/* ===== Supabase cloud sync + login. Paste your project values below ===== */
+const SB_URL='',SB_KEY='';
+const AUTH={on:!!(SB_URL&&SB_KEY&&window.supabase),user:null,status:''};
+const sb=AUTH.on?supabase.createClient(SB_URL,SB_KEY):null,timers={};
+function setSt(x){AUTH.status=x;const e=$('st');if(e)e.textContent=x}
+function push(s){if(!AUTH.user)return;clearTimeout(timers[s.id]);setSt('Saving…');
+ timers[s.id]=setTimeout(async()=>{const{error}=await sb.from('sheets').upsert({id:s.id,user_id:AUTH.user.id,data:s,updated_at:new Date().toISOString()});setSt(error?'⚠ Not synced':'☁ Saved')},600)}
+async function pull(){setSt('Syncing…');const{data,error}=await sb.from('sheets').select('data').order('updated_at',{ascending:false});
+ if(error){setSt('⚠ Offline');return}
+ if(!data.length&&db.sheets.length){db.sheets.forEach(push);render();return}
+ db.sheets=data.map(r=>r.data);save();render();setSt('☁ Saved')}
+async function drop(id){if(!AUTH.user)return;const{error}=await sb.from('sheets').delete().eq('id',id);if(error)setSt('⚠ Not synced')}
+async function doAuth(k){const em=$('em').value.trim(),pw=$('pw').value,m=$('am');
+ if(!em||pw.length<6){m.textContent='Enter your email and a password of at least 6 characters.';return}
+ m.textContent='Please wait…';
+ const r=k==='signin'?await sb.auth.signInWithPassword({email:em,password:pw}):await sb.auth.signUp({email:em,password:pw});
+ if(r.error){m.textContent=r.error.message;return}
+ if(k==='signup'&&!r.data.session)m.textContent='Account created. Confirm the email we sent you, then sign in.'}
+function authView(){document.body.className=db.dark?'dark':'';$('fab').style.display='none';$('nav').style.display='none';
+ $('top').innerHTML='<h1>Roll Call</h1>';
+ $('app').innerHTML=`<div class="wrap" style="max-width:380px"><h2>Sign in to your sheets</h2><p style="color:var(--mute)">Your attendance, marks and fees are saved online and available on any device.</p>
+ <label>Email<input id="em" type="email" autocomplete="email" style="width:100%;padding:12px;border-radius:12px;border:1px solid var(--line);background:var(--card);color:var(--ink)"></label><br><br>
+ <label>Password<input id="pw" type="password" autocomplete="current-password" style="width:100%;padding:12px;border-radius:12px;border:1px solid var(--line);background:var(--card);color:var(--ink)"></label>
+ <p id="am" style="color:var(--at)" role="status"></p><button class="btn" data-a="signin">Sign in</button> <button class="btn g2" data-a="signup">Create account</button></div>`}
+if(AUTH.on){sb.auth.getSession().then(({data})=>{AUTH.user=data.session?.user||null;AUTH.user?pull():render()});
+ sb.auth.onAuthStateChange((_e,ses)=>{const had=AUTH.user;AUTH.user=ses?.user||null;if(AUTH.user&&!had)pull();if(!AUTH.user&&had){db.sheets=[];save();V.sid=null;render()}})}
+
 function render(){
+ if(AUTH.on&&!AUTH.user)return authView();
  document.body.className=db.dark?'dark':'';const s=cur();
  $('fab').style.display=!s&&V.tab!=='calc'?'block':'none';$('nav').style.display=s?'none':'flex';
  document.body.style.paddingBottom=s?0:'70px';
  $('top').innerHTML=s?`<button data-a="back" aria-label="Back">←</button><h1>${esc(s.name)}</h1><button data-a="menu" aria-label="Menu">⋮</button>`:
-  `<h1>${V.tab==='calc'?'Percentage Calculator':'All Sheets'}</h1><button data-a="srch" aria-label="Search">🔍</button><button data-a="dark" aria-label="Toggle theme">${db.dark?'☀️':'🌙'}</button>`;
+  `<h1>${V.tab==='calc'?'Percentage Calculator':'All Sheets'}</h1>${AUTH.user?`<button id="st" data-a="pull" style="font-size:.75rem" aria-label="Sync now">${esc(AUTH.status||'☁ Saved')}</button><button data-a="out" aria-label="Sign out">⎋</button>`:''}<button data-a="srch" aria-label="Search">🔍</button><button data-a="dark" aria-label="Toggle theme">${db.dark?'☀️':'🌙'}</button>`;
  $('nav').innerHTML=[['all','▦','All'],['attendance','📅','Attendance'],['marks','📝','Marks'],['fees','💳','Fees'],['calc','🧮','Calc']].map(([k,i,l])=>`<button data-t="${k}" class="${V.tab===k?'on':''}">${i}<br>${l}</button>`).join('');
  $('app').innerHTML=s?sheet(s):V.tab==='calc'?calc():list();
 }
@@ -112,7 +142,7 @@ function act(k){
  else if(k==='fee'){const t=+prompt('Total fee per student',s.total);if(!t)return;s.total=t}
  else if(k==='addst'){const t=prompt('Add students. Separate several with ; (e.g. 5, Asha; 6, Ravi)');if(!t)return;s.students.push(...parseSt(t.replace(/;/g,'\n'),s.students.length))}
  else if(k==='ren'){const n=prompt('Sheet name',s.name);if(!n)return;s.name=n}
- else if(k==='del'){if(!confirm('Delete this sheet?'))return;db.sheets=db.sheets.filter(x=>x!==s);V.sid=null}
+ else if(k==='del'){if(!confirm('Delete this sheet?'))return;db.sheets=db.sheets.filter(x=>x!==s);drop(s.id);V.sid=null}
  else if(k==='xl')return xl(s);
  if(db.sheets.includes(s))touch(s);save();render();
 }
@@ -135,12 +165,15 @@ document.addEventListener('click',e=>{
  else if(D.a==='srch')V.search=!V.search;
  else if(D.a==='edit')V.edit=!V.edit;
  else if(D.a==='menu'){menu();return}
+ else if(D.a==='signin'||D.a==='signup'){doAuth(D.a);return}
+ else if(D.a==='out'){if(confirm('Sign out?'))sb.auth.signOut();return}
+ else if(D.a==='pull'){pull();return}
  else if(D.a==='close'){$('dlg').close();return}
  else if(D.a==='imp'){$('xf').click();return}
  else if(D.a==='create'){const n=$('nn').value.trim();if(!n){$('nn').focus();return}const t=$('nt').value,st=parseSt($('ns').value);
   const o={id:uid(),name:n,type:t,mod:Date.now(),students:st};
   if(t==='attendance')Object.assign(o,{dates:[],att:{}});if(t==='marks')Object.assign(o,{tests:[{id:uid(),name:'Test 1',total:100}],vals:{}});if(t==='fees')Object.assign(o,{total:1000,vals:{}});
-  db.sheets.unshift(o);V.sid=o.id;$('dlg').close()}
+  db.sheets.unshift(o);push(o);V.sid=o.id;$('dlg').close()}
  else if(b.id==='fab'){newSheet();return}
  else if(D.m2){act(D.m2);return}
  else if(D.rm){if(!confirm('Remove this student?'))return;s.students=s.students.filter(x=>x.id!==D.rm);touch(s)}
