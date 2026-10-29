@@ -1,0 +1,192 @@
+<!DOCTYPE html>
+<html lang="en"><head><meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Roll Call – Attendance, Marks & Fees</title>
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.45.4/dist/umd/supabase.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+<style>
+:root{--bg:#eef3fb;--card:#fff;--ink:#16203a;--mute:#6a7590;--line:#dfe6f3;--pri:#1f4fd6;--pb:#d4e6fb;--pt:#0b5cad;--ab:#fadcdc;--at:#b3261e;--hb:#e9ecf2;--ok:#d9f4e2;--okt:#17743a;--mid:#fdeccb;--midt:#9a5b00}
+.dark{--bg:#0e1424;--card:#171f35;--ink:#e8ecf7;--mute:#93a0bf;--line:#26314f;--pri:#4f7cff;--pb:#1d3a66;--pt:#9cc8ff;--ab:#4a2024;--at:#ff9c94;--hb:#222b44;--ok:#173c28;--okt:#7be0a1;--mid:#4a3612;--midt:#f2c36b}
+*{box-sizing:border-box}body{margin:0;background:var(--bg);color:var(--ink);font:15px/1.4 system-ui,sans-serif;padding-bottom:70px}
+button,input,select,textarea{font:inherit;color:inherit}button{cursor:pointer;border:0;background:none}
+:focus-visible{outline:3px solid var(--pri);outline-offset:1px}
+.top{background:var(--pri);color:#fff;display:flex;align-items:center;gap:8px;padding:12px 14px;position:sticky;top:0;z-index:20}
+.top h1{font-size:1.15rem;margin:0;flex:1;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.top button{color:#fff;font-size:1.2rem;padding:4px 8px;border-radius:8px}.top button.on{background:#ffffff33}
+.wrap{max-width:900px;margin:0 auto;padding:12px}
+.card{display:flex;gap:12px;align-items:center;background:var(--card);border:1px solid var(--line);border-radius:16px;padding:14px;margin-bottom:10px;width:100%;text-align:left}
+.ic{width:44px;height:44px;border-radius:12px;display:grid;place-items:center;font-size:1.3rem;background:var(--pb)}
+.card .m{flex:1}.card b{display:block}.card small{color:var(--mute)}
+.fab{position:fixed;right:18px;bottom:78px;width:56px;height:56px;border-radius:18px;background:var(--pri);color:#fff;font-size:2rem;box-shadow:0 4px 14px #0004}
+nav{position:fixed;bottom:0;left:0;right:0;background:var(--card);border-top:1px solid var(--line);display:flex;z-index:20}
+nav button{flex:1;padding:8px 0;color:var(--mute);font-size:.8rem}nav button.on{color:var(--pri);font-weight:700}
+.bar{display:flex;gap:6px;align-items:center;padding:8px 12px;background:var(--card);border-bottom:1px solid var(--line);font-size:.85rem;color:var(--mute)}
+.bar span{flex:1}.bar button{font-size:1.2rem;padding:4px 10px;border-radius:10px;color:var(--ink)}.bar button.on{background:var(--pb)}
+.gw{overflow:auto;max-height:calc(100vh - 170px);background:var(--card)}
+table{border-collapse:separate;border-spacing:0;font-size:.85rem}
+th,td{padding:6px 8px;border-bottom:1px solid var(--line);border-right:1px solid var(--line);text-align:center;white-space:nowrap;background:var(--card)}
+thead th{position:sticky;top:0;z-index:3;font-size:.72rem}
+.s1,.s2{position:sticky;z-index:2;text-align:left}.s1{left:0;min-width:110px}.s2{left:110px;min-width:44px;text-align:center}thead .s1,thead .s2{z-index:5}
+.cell{display:inline-block;width:32px;height:30px;line-height:30px;border-radius:8px;font-weight:700;user-select:none}
+.P{background:var(--pb);color:var(--pt)}.A{background:var(--ab);color:var(--at)}.H{background:var(--hb);color:var(--mute)}.E{background:var(--hb)}
+.hol{color:var(--at)}.chip{padding:2px 8px;border-radius:6px;font-weight:700}.g{background:var(--ok);color:var(--okt)}.o{background:var(--mid);color:var(--midt)}.r{background:var(--ab);color:var(--at)}
+td input{width:70px;text-align:center;border:1px solid var(--line);border-radius:6px;background:var(--bg);padding:4px}
+dialog{border:0;border-radius:18px;padding:18px;background:var(--card);color:var(--ink);width:min(92vw,400px)}dialog::backdrop{background:#0008}
+dialog label{display:block;margin:8px 0 2px;color:var(--mute);font-size:.85rem}dialog input,dialog select,dialog textarea{width:100%;padding:9px;border:1px solid var(--line);border-radius:10px;background:var(--bg)}
+.btn{background:var(--pri);color:#fff;padding:10px 16px;border-radius:12px;font-weight:600}.btn.g2{background:var(--hb);color:var(--ink)}
+.mi{display:block;width:100%;text-align:left;padding:12px 6px;border-bottom:1px solid var(--line)}.mi.d{color:var(--at)}
+.empty{text-align:center;color:var(--mute);padding:40px 10px}
+.res{background:var(--pb);color:var(--pt);padding:14px;border-radius:14px;text-align:center;font-weight:700;margin:14px 0}
+</style></head><body>
+<div class="top" id="top"></div><div id="app"></div>
+<button class="fab" id="fab" aria-label="New sheet">+</button>
+<nav id="nav"></nav>
+<dialog id="dlg"></dialog><input type="file" id="xf" accept=".xlsx,.xls,.csv" hidden>
+<script>
+const K='rollcall.v2';let db;try{db=JSON.parse(localStorage.getItem(K))}catch(e){}
+db=db||{sheets:[],dark:false};let V={tab:'all',sid:null,edit:true,q:'',search:false};
+const $=i=>document.getElementById(i),uid=()=>Math.random().toString(36).slice(2,9),
+esc=s=>String(s??'').replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
+const save=()=>{try{localStorage.setItem(K,JSON.stringify(db))}catch(e){}},cur=()=>db.sheets.find(s=>s.id===V.sid);
+const ICON={attendance:'📅',marks:'📝',fees:'💳'},LBL={attendance:'Attendance',marks:'Marks',fees:'Fees'};
+const touch=s=>{s.mod=Date.now();save();push(s)};
+const pc=(a,b)=>b>0?Math.round(a/b*1000)/10:null;
+const chip=p=>p==null?'':`<span class="chip ${p>=75?'g':p>=60?'o':'r'}">${p}%</span>`;
+const remark=p=>p==null?'':p>=90?'EXCELLENT':p>=70?'VERY GOOD':p>=50?'GOOD':p>=25?'BAD':'WORST';
+
+/* ===== Supabase cloud sync + login. Paste your project values below ===== */
+const SB_URL='https://cvscgpqwbeuqgodhcvdq.supabase.co',SB_KEY='sb_publishable_Ul1xhv1ugqptgWBcK0tk2g_zBK9bbIF';
+const AUTH={on:!!(SB_URL&&SB_KEY&&window.supabase),user:null,status:''};
+const sb=AUTH.on?supabase.createClient(SB_URL,SB_KEY,{auth:{lock:async(n,w,f)=>await f()}}):null,timers={};
+function setSt(x){AUTH.status=x;const e=$('st');if(e)e.textContent=x}
+function push(s){if(!AUTH.user)return;clearTimeout(timers[s.id]);setSt('Saving…');
+ timers[s.id]=setTimeout(async()=>{const{error}=await sb.from('sheets').upsert({id:s.id,user_id:AUTH.user.id,data:s,updated_at:new Date().toISOString()});setSt(error?'⚠ Not synced':'☁ Saved')},600)}
+async function pull(){setSt('Syncing…');const{data,error}=await sb.from('sheets').select('data').order('updated_at',{ascending:false});
+ if(error){render();setSt('⚠ '+error.message);return}
+ if(!data.length&&db.sheets.length){db.sheets.forEach(push);render();return}
+ db.sheets=data.map(r=>r.data);save();render();setSt('☁ Saved')}
+async function drop(id){if(!AUTH.user)return;const{error}=await sb.from('sheets').delete().eq('id',id);if(error)setSt('⚠ Not synced')}
+async function doAuth(k){const em=$('em').value.trim(),pw=$('pw').value,m=$('am');
+ if(!em||pw.length<6){m.textContent='Enter your email and a password of at least 6 characters.';return}
+ m.textContent='Please wait…';
+ let r;try{r=await Promise.race([k==='signin'?sb.auth.signInWithPassword({email:em,password:pw}):sb.auth.signUp({email:em,password:pw}),new Promise((_,j)=>setTimeout(()=>j(new Error('Taking too long. Check your internet connection and try again.')),20000))])}catch(x){m.textContent=x.message;return}
+ if(r.error){m.textContent=r.error.message;return}
+ if(r.data.session&&!AUTH.user){AUTH.user=r.data.session.user;pull()}
+ if(k==='signup'&&!r.data.session)m.textContent='Account created. Confirm the email we sent you, then sign in.'}
+function authView(){document.body.className=db.dark?'dark':'';$('fab').style.display='none';$('nav').style.display='none';
+ $('top').innerHTML='<h1>Roll Call</h1>';
+ $('app').innerHTML=`<div class="wrap" style="max-width:380px"><h2>Sign in to your sheets</h2><p style="color:var(--mute)">Your attendance, marks and fees are saved online and available on any device.</p>
+ <label>Email<input id="em" type="email" autocomplete="email" style="width:100%;padding:12px;border-radius:12px;border:1px solid var(--line);background:var(--card);color:var(--ink)"></label><br><br>
+ <label>Password<input id="pw" type="password" autocomplete="current-password" style="width:100%;padding:12px;border-radius:12px;border:1px solid var(--line);background:var(--card);color:var(--ink)"></label>
+ <p id="am" style="color:var(--at)" role="status"></p><button class="btn" data-a="signin">Sign in</button> <button class="btn g2" data-a="signup">Create account</button></div>`}
+if(AUTH.on){sb.auth.getSession().then(({data})=>{AUTH.user=data.session?.user||null;AUTH.user?pull():render()});
+ sb.auth.onAuthStateChange((_e,ses)=>setTimeout(()=>{const had=AUTH.user;AUTH.user=ses?.user||null;if(AUTH.user&&!had)pull();if(!AUTH.user&&had){db.sheets=[];save();V.sid=null;render()}},0))}
+
+function render(){
+ if(AUTH.on&&!AUTH.user)return authView();
+ document.body.className=db.dark?'dark':'';const s=cur();
+ $('fab').style.display=!s&&V.tab!=='calc'?'block':'none';$('nav').style.display=s?'none':'flex';
+ document.body.style.paddingBottom=s?0:'70px';
+ $('top').innerHTML=s?`<button data-a="back" aria-label="Back">←</button><h1>${esc(s.name)}</h1><button data-a="menu" aria-label="Menu">⋮</button>`:
+  `<h1>${V.tab==='calc'?'Percentage Calculator':'All Sheets'}</h1>${AUTH.user?`<button id="st" data-a="pull" style="font-size:.75rem" aria-label="Sync now">${esc(AUTH.status||'☁ Saved')}</button><button data-a="out" aria-label="Sign out">⎋</button>`:''}<button data-a="srch" aria-label="Search">🔍</button><button data-a="dark" aria-label="Toggle theme">${db.dark?'☀️':'🌙'}</button>`;
+ $('nav').innerHTML=[['all','▦','All'],['attendance','📅','Attendance'],['marks','📝','Marks'],['fees','💳','Fees'],['calc','🧮','Calc']].map(([k,i,l])=>`<button data-t="${k}" class="${V.tab===k?'on':''}">${i}<br>${l}</button>`).join('');
+ $('app').innerHTML=s?sheet(s):V.tab==='calc'?calc():list();
+}
+function list(){
+ const f=db.sheets.filter(s=>(V.tab==='all'||s.type===V.tab)&&s.name.toLowerCase().includes(V.q.toLowerCase()));
+ return `<div class="wrap">${V.search?`<input id="q" value="${esc(V.q)}" placeholder="Search sheets" style="width:100%;padding:10px;border-radius:12px;border:1px solid var(--line);margin-bottom:10px;background:var(--card);color:var(--ink)">`:''}${f.map(s=>`<button class="card" data-o="${s.id}"><div class="ic">${ICON[s.type]}</div><div class="m"><b>${esc(s.name)}</b><small>👥 ${s.students.length} Students · ${LBL[s.type]}</small></div><small>Modified<br>${new Date(s.mod).toLocaleString([], {month:'short',day:'numeric',hour:'2-digit',minute:'2-digit'})}</small></button>`).join('')||'<div class="empty">No sheets here yet.<br>Tap + to create your first sheet.</div>'}</div>`;
+}
+function sheet(s){
+ const e=V.edit,hint={attendance:'Tap a cell to change · long press a date for Holiday',marks:'Enter marks in the cells',fees:'Enter amounts paid in the cells'}[s.type];
+ let h='',b='';const nm=`<th class="s1">Student Name</th><th class="s2">Roll</th>`;
+ const rows=(fn)=>s.students.map(st=>`<tr><td class="s1">${e?`<button data-rm="${st.id}" aria-label="Remove" style="color:var(--at)">×</button> `:''}${esc(st.name)}</td><td class="s2">${esc(st.roll)}</td>${fn(st)}</tr>`).join('');
+ if(s.type==='attendance'){
+  h=nm+s.dates.map(d=>{const t=new Date(d.d+'T00:00');return `<th data-hd="${d.d}" style="min-width:48px;user-select:none"><div>${t.toLocaleDateString('en',{weekday:'short'}).toUpperCase()}</div><b style="font-size:1rem" class="${d.h?'hol':''}">${String(t.getDate()).padStart(2,'0')}</b><div>${t.toLocaleDateString('en',{month:'short'}).toUpperCase()}</div></th>`}).join('')+'<th>P</th><th>A</th><th>%</th>';
+  b=rows(st=>{let p=0,a=0;const c=s.dates.map(d=>{if(d.h)return `<td><span class="cell H">H</span></td>`;const v=(s.att[st.id]||{})[d.d]||'';v==='P'&&p++;v==='A'&&a++;return `<td data-c="${st.id}|${d.d}"><span class="cell ${v||'E'}">${v||'·'}</span></td>`}).join('');return c+`<td>${p}</td><td style="color:var(--at)">${a}</td><td>${chip(pc(p,p+a))}</td>`});
+ }else if(s.type==='marks'){
+  h=nm+s.tests.map(t=>`<th colspan="4" data-tn="${t.id}">${esc(t.name)} ✎</th>`).join('');
+  h=`<tr>${h}</tr><tr><th class="s1"></th><th class="s2"></th>${s.tests.map(()=>'<th>Obtained</th><th>Total</th><th>%</th><th>Remarks</th>').join('')}</tr>`;
+  b=rows(st=>s.tests.map(t=>{const v=(s.vals[st.id]||{})[t.id],p=v===''||v==null?null:pc(+v,t.total);return `<td>${e?`<input type="number" data-m="${st.id}|${t.id}" value="${v??''}">`:(v??'')}</td><td>${t.total}</td><td><b>${p??''}${p!=null?'%':''}</b></td><td>${remark(p)}</td>`}).join(''));
+ }else{
+  h=nm+'<th>Paid</th><th>Pending</th><th>Total</th><th>Remarks</th>';
+  b=rows(st=>{const v=+(s.vals[st.id]||{}).paid||0,pe=Math.max(s.total-v,0);return `<td>${e?`<input type="number" data-f="${st.id}" value="${(s.vals[st.id]||{}).paid??''}">`:v}</td><td>${pe}</td><td>${s.total}</td><td>${pe?'PENDING':'PAID'}</td>`});
+ }
+ if(s.type!=='marks')h=`<tr>${h}</tr>`;
+ return `<div class="bar"><span>ⓘ ${e?'Editing mode: '+hint:'View mode'}</span><button data-a="edit" class="${e?'on':''}" aria-label="Toggle edit mode">${e?'✏️':'👁'}</button><button data-a="menu" aria-label="More">＋</button></div>
+ <div class="gw"><table><thead>${h}</thead><tbody>${b}</tbody></table>${s.students.length?'':'<div class="empty">No students yet. Tap ＋ → Add students.</div>'}</div>`;
+}
+function calc(){
+ return `<div class="wrap"><label>Total marks<input id="ct" type="number" style="width:100%;padding:12px;border-radius:12px;border:1px solid var(--line);background:var(--card);color:var(--ink)"></label><br><br><label>Marks obtained<input id="co" type="number" style="width:100%;padding:12px;border-radius:12px;border:1px solid var(--line);background:var(--card);color:var(--ink)"></label><p style="text-align:center;color:var(--mute)">OR</p><label>Percentage (%)<input id="cp" type="number" style="width:100%;padding:12px;border-radius:12px;border:1px solid var(--line);background:var(--card);color:var(--ink)"></label><div class="res" id="cr">Enter any two values</div></div>`;
+}
+function doCalc(){const t=+$('ct').value,o=+$('co').value,p=+$('cp').value;let r='Enter any two values';
+ if(t&&$('co').value!=='')r=`Percentage: ${(o/t*100).toFixed(2)}%`;else if(t&&$('cp').value!=='')r=`Marks obtained: ${(t*p/100).toFixed(2)}`;else if($('co').value!==''&&p)r=`Total marks: ${(o*100/p).toFixed(2)}`;$('cr').textContent=r}
+function dlg(html){const d=$('dlg');d.innerHTML=html;d.showModal();return d}
+function newSheet(){
+ dlg(`<h3 style="margin-top:0">New sheet</h3><label>Name<input id="nn" placeholder="e.g. Math Class"></label><label>Type<select id="nt"><option value="attendance">Attendance</option><option value="marks">Marks</option><option value="fees">Fees</option></select></label>
+ <label>Students (one per line: roll, name)</label><textarea id="ns" rows="5" placeholder="1, Asha Patil&#10;2, Rohan Mehta"></textarea>
+ <p><button class="btn g2" data-a="imp">Import from Excel</button></p><div style="display:flex;gap:8px;justify-content:flex-end"><button class="btn g2" data-a="close">Cancel</button><button class="btn" data-a="create">Create</button></div>`);
+}
+const parseSt=(txt,start=0)=>txt.split('\n').map(x=>x.trim()).filter(Boolean).map((l,i)=>{const m=l.match(/^([\w-]+)\s*[,\t]\s*(.+)$/);return{id:uid(),roll:m?m[1]:String(start+i+1),name:m?m[2]:l}});
+function menu(){
+ const s=cur(),it=[['addst','Add students']];
+ if(s.type==='attendance')it.unshift(['adddate','Add date'],['allp','Mark all present'],['alla','Mark all absent'],['clr','Clear all']);
+ if(s.type==='marks')it.unshift(['addtest','Add marks group']);
+ if(s.type==='fees')it.unshift(['fee','Set total fee']);
+ it.push(['xl','Export to Excel'],['ren','Rename sheet'],['del','Delete sheet']);
+ dlg(it.map(([k,l])=>`<button class="mi ${k==='del'?'d':''}" data-m2="${k}">${l}</button>`).join(''));
+}
+function act(k){
+ const s=cur();$('dlg').close();
+ if(k==='adddate'){const d=prompt('Date (YYYY-MM-DD)',new Date().toISOString().slice(0,10));if(!d||!/^\d{4}-\d{2}-\d{2}$/.test(d)||s.dates.some(x=>x.d===d))return;s.dates.push({d,h:0});s.dates.sort((a,b)=>a.d<b.d?-1:1);s.students.forEach(t=>(s.att[t.id]=s.att[t.id]||{})[d]='P')}
+ else if(k==='allp'||k==='alla'||k==='clr'){if(!confirm('Apply to all students and dates?'))return;s.students.forEach(t=>{s.att[t.id]={};s.dates.forEach(d=>{if(!d.h&&k!=='clr')s.att[t.id][d.d]=k==='allp'?'P':'A'})})}
+ else if(k==='addtest'){const n=prompt('Group name','Test '+(s.tests.length+1));if(!n)return;const t=+prompt('Total marks','100');if(!t)return;s.tests.push({id:uid(),name:n,total:t})}
+ else if(k==='fee'){const t=+prompt('Total fee per student',s.total);if(!t)return;s.total=t}
+ else if(k==='addst'){const t=prompt('Add students. Separate several with ; (e.g. 5, Asha; 6, Ravi)');if(!t)return;s.students.push(...parseSt(t.replace(/;/g,'\n'),s.students.length))}
+ else if(k==='ren'){const n=prompt('Sheet name',s.name);if(!n)return;s.name=n}
+ else if(k==='del'){if(!confirm('Delete this sheet?'))return;db.sheets=db.sheets.filter(x=>x!==s);drop(s.id);V.sid=null}
+ else if(k==='xl')return xl(s);
+ if(db.sheets.includes(s))touch(s);save();render();
+}
+function xl(s){
+ let a;if(s.type==='attendance'){a=[['Roll','Name',...s.dates.map(d=>d.d+(d.h?' (H)':'')),'P','A','%']];s.students.forEach(t=>{let p=0,x=0;const r=s.dates.map(d=>{if(d.h)return'H';const v=(s.att[t.id]||{})[d.d]||'';v==='P'&&p++;v==='A'&&x++;return v});a.push([t.roll,t.name,...r,p,x,pc(p,p+x)??''])})}
+ else if(s.type==='marks'){a=[['Roll','Name',...s.tests.flatMap(t=>[t.name+' Obtained','Total','%'])]];s.students.forEach(t=>a.push([t.roll,t.name,...s.tests.flatMap(q=>{const v=(s.vals[t.id]||{})[q.id];return[v??'',q.total,v===''||v==null?'':pc(+v,q.total)]})]))}
+ else{a=[['Roll','Name','Paid','Pending','Total']];s.students.forEach(t=>{const v=+(s.vals[t.id]||{}).paid||0;a.push([t.roll,t.name,v,Math.max(s.total-v,0),s.total])})}
+ if(!window.XLSX)return alert('Excel library failed to load. Check your internet connection.');
+ const wb=XLSX.utils.book_new();XLSX.utils.book_append_sheet(wb,XLSX.utils.aoa_to_sheet(a),'Sheet1');XLSX.writeFile(wb,s.name+'.xlsx');
+}
+let lp;
+document.addEventListener('pointerdown',e=>{const h=e.target.closest('[data-hd]');if(!h)return;lp=setTimeout(()=>{lp=0;const s=cur(),d=s.dates.find(x=>x.d===h.dataset.hd);d.h=d.h?0:1;touch(s);render()},550)});
+['pointerup','pointerleave','pointermove'].forEach(t=>document.addEventListener(t,()=>{clearTimeout(lp)}));
+document.addEventListener('click',e=>{
+ const b=e.target.closest('button,[data-c],[data-tn]');if(!b)return;const s=cur(),D=b.dataset;
+ if(D.t){V.tab=D.t;V.sid=null;V.search=false;V.q=''}
+ else if(D.o){V.sid=D.o;V.edit=true}
+ else if(D.a==='back')V.sid=null;
+ else if(D.a==='dark')db.dark=!db.dark;
+ else if(D.a==='srch')V.search=!V.search;
+ else if(D.a==='edit')V.edit=!V.edit;
+ else if(D.a==='menu'){menu();return}
+ else if(D.a==='signin'||D.a==='signup'){doAuth(D.a);return}
+ else if(D.a==='out'){if(confirm('Sign out?'))sb.auth.signOut();return}
+ else if(D.a==='pull'){pull();return}
+ else if(D.a==='close'){$('dlg').close();return}
+ else if(D.a==='imp'){$('xf').click();return}
+ else if(D.a==='create'){const n=$('nn').value.trim();if(!n){$('nn').focus();return}const t=$('nt').value,st=parseSt($('ns').value);
+  const o={id:uid(),name:n,type:t,mod:Date.now(),students:st};
+  if(t==='attendance')Object.assign(o,{dates:[],att:{}});if(t==='marks')Object.assign(o,{tests:[{id:uid(),name:'Test 1',total:100}],vals:{}});if(t==='fees')Object.assign(o,{total:1000,vals:{}});
+  db.sheets.unshift(o);push(o);V.sid=o.id;$('dlg').close()}
+ else if(b.id==='fab'){newSheet();return}
+ else if(D.m2){act(D.m2);return}
+ else if(D.rm){if(!confirm('Remove this student?'))return;s.students=s.students.filter(x=>x.id!==D.rm);touch(s)}
+ else if(D.c){if(!V.edit)return;const[id,d]=D.c.split('|');const r=s.att[id]=s.att[id]||{};r[d]=r[d]==='P'?'A':r[d]==='A'?'':'P';touch(s)}
+ else if(D.tn){const t=s.tests.find(x=>x.id===D.tn),n=prompt('Rename group',t.name);if(n)t.name=n;touch(s)}
+ else return;
+ save();render();
+});
+document.addEventListener('change',e=>{const s=cur(),D=e.target.dataset;if(!s)return;
+ if(D.m){const[i,t]=D.m.split('|');(s.vals[i]=s.vals[i]||{})[t]=e.target.value}else if(D.f){(s.vals[D.f]=s.vals[D.f]||{}).paid=e.target.value}else return;touch(s);render()});
+document.addEventListener('input',e=>{if(e.target.id==='q'){V.q=e.target.value;const p=e.target.selectionStart;render();const q=$('q');q.focus();q.setSelectionRange(p,p)}if(['ct','co','cp'].includes(e.target.id))doCalc()});
+$('xf').onchange=e=>{const f=e.target.files[0];if(!f||!window.XLSX)return;f.arrayBuffer().then(buf=>{const w=XLSX.read(buf),r=XLSX.utils.sheet_to_json(w.Sheets[w.SheetNames[0]],{header:1}).filter(x=>x.length);
+ const hd=/name|roll/i.test(String(r[0]));const rows=hd?r.slice(1):r;const txt=rows.map((x,i)=>x.length>1?`${x[0]}, ${x[1]}`:`${i+1}, ${x[0]}`).join('\n');if($('ns'))$('ns').value=txt;e.target.value=''})};
+render();
+</script></body></html>
